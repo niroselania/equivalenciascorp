@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Etiquetas depósito</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #171a21;
+      --border: #2a2e38;
+      --text: #e8eaed;
+      --muted: #9aa1ac;
+      --accent: #5b8cff;
+      --accent-hover: #4a76e0;
+      --ok: #3ecf8e;
+      --warn: #e0a13e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .wrap { width: 100%; max-width: 640px; }
+    h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    p.sub { color: var(--muted); margin-top: 0; margin-bottom: 28px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 1.05rem; margin: 0 0 6px 0; }
+    .card .desc { color: var(--muted); font-size: 0.9rem; margin-bottom: 16px; }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+    input[type="file"], input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      background: #0f1115;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    input[type="text"] { border-style: solid; font-size: 1.15rem; letter-spacing: 0.04em; }
+    input[type="text"].sku { font-size: 1rem; letter-spacing: 0; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--ok);
+      margin-top: 10px;
+    }
+    .status.warn { color: var(--warn); }
+    button, a.btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      text-align: center;
+      text-decoration: none;
+      display: block;
+    }
+    button:hover, a.btn:hover { background: var(--accent-hover); }
+    button:disabled { opacity: 0.55; cursor: wait; }
+    .botones { display: flex; gap: 10px; margin-top: 16px; }
+    .botones button, .botones a.btn { margin-top: 0; flex: 1; }
+    a.btn.secondary { background: #2a2e38; }
+    a.btn.secondary:hover { background: #363b47; }
+    .flash {
+      background: #3a2020;
+      border: 1px solid #7a3a3a;
+      color: #ffb4b4;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+    .flash.ok {
+      background: #1b2a22;
+      border-color: #2f5a42;
+      color: #9ee0be;
+    }
+    .preview {
+      margin-top: 20px;
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      min-height: 90px;
+    }
+    .preview.visible { display: flex; }
+    .preview img { image-rendering: pixelated; max-width: 100%; }
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-align: center;
+      margin-top: 24px;
+      line-height: 1.5;
+    }
+    .busy { color: var(--muted); font-size: 0.85rem; margin-top: 10px; display: none; }
+    .tres-campos { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 14px; }
+    @media (max-width: 520px) { .tres-campos { grid-template-columns: 1fr; } }
+    .opciones { display: none; margin-top: 14px; }
+    .opciones.visible { display: block; }
+    .opciones button {
+      background: #2a2e38;
+      font-size: 0.9rem;
+      margin-top: 8px;
+      text-align: left;
+    }
+    .opciones button:hover { background: #363b47; }
+    @media print {
+      @page { size: 40mm 20mm; margin: 0; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: white;
+        width: 40mm;
+        height: 20mm;
+      }
+      body * { visibility: hidden; }
+      #preview, #preview img { visibility: visible; }
+      #preview {
+        position: absolute;
+        left: 0;
+        top: 0;
+        margin: 0;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: white;
+        min-height: 0;
+        width: 40mm;
+        height: 20mm;
+        display: flex !important;
+      }
+      #preview img {
+        width: 40mm;
+        height: 20mm;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Etiquetas depósito</h1>
+    <p class="sub">Cargá la equivalencia y completá planillas de stock con los códigos de barra correspondientes.</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for m in messages %}
+          <div class="flash {% if 'correctamente' in m %}ok{% endif %}">{{ m }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form action="/subir-equivalencia" method="post" enctype="multipart/form-data">
+      <div class="card">
+        <h2>1. Planilla de equivalencia</h2>
+        <div class="desc">El export con códigos de barra, SKU, color, talle y descripción.</div>
+        <label for="grande">Archivo .xls / .xlsx</label>
+        <input type="file" id="grande" name="grande" accept=".xls,.xlsx" required>
+        {% if grande_cached %}
+          <div class="status">● Equivalencia cargada: {{ grande_info }}</div>
+        {% else %}
+          <div class="status warn">● Todavía no cargaste la planilla de equivalencia.</div>
+        {% endif %}
+        <button type="submit">Guardar equivalencia</button>
+      </div>
+    </form>
+
+    <form action="/procesar-stock" method="post" enctype="multipart/form-data">
+      <div class="card">
+        <h2>2. Planilla de stock</h2>
+        <div class="desc">Subí una planilla como Patagonia equivalencia. Se agrega la columna A con el código de barras, cruzando SKU, código de color y talle.</div>
+        <label for="stock">Archivo .xlsx</label>
+        <input type="file" id="stock" name="stock" accept=".xlsx" required>
+        <button type="submit">Procesar y descargar</button>
+      </div>
+    </form>
+
+    <div class="card">
+      <h2>3. Generar etiqueta (4 x 2 cm)</h2>
+      <div class="desc">Escaneá el código o buscá por SKU, color y talle. La lectora también sirve.</div>
+      {% if not grande_cached %}
+        <div class="flash">Falta cargar la equivalencia antes de generar etiquetas.</div>
+      {% endif %}
+      <form id="form-etiqueta" autocomplete="off">
+        <label for="barcode">Código de barras</label>
+        <input type="text" id="barcode" name="barcode" placeholder="Escaneá o pegá el código" inputmode="numeric" autofocus>
+        <div class="tres-campos">
+          <div>
+            <label for="sku">SKU</label>
+            <input class="sku" type="text" id="sku" name="sku" placeholder="84041">
+          </div>
+          <div>
+            <label for="color">Color</label>
+            <input class="sku" type="text" id="color" name="color" placeholder="LMBE">
+          </div>
+          <div>
+            <label for="talle">Talle</label>
+            <input class="sku" type="text" id="talle" name="talle" placeholder="S">
+          </div>
+        </div>
+        <div class="busy" id="busy">Generando etiqueta…</div>
+        <div class="flash" id="error" style="display:none; margin:12px 0 0;"></div>
+        <div class="opciones" id="opciones"></div>
+        <div class="botones">
+          <button type="submit" id="btn-preview">Previsualizar</button>
+          <a class="btn secondary" id="link-imprimir" href="#">Imprimir</a>
+        </div>
+      </form>
+      <div class="preview" id="preview">
+        <img id="preview-img" alt="Vista previa de la etiqueta">
+      </div>
+    </div>
+
+    <div class="footer-note">
+      La lectora suele mandar Enter al final. Imprimí a tamaño real, 4 x 2 cm (40 x 20 mm).
+    </div>
+  </div>
+
+  <script>
+    const barcodeField = document.getElementById('barcode');
+    const skuField = document.getElementById('sku');
+    const colorField = document.getElementById('color');
+    const talleField = document.getElementById('talle');
+    const preview = document.getElementById('preview');
+    const previewImg = document.getElementById('preview-img');
+    const errorBox = document.getElementById('error');
+    const opcionesBox = document.getElementById('opciones');
+    const busy = document.getElementById('busy');
+    const btnPreview = document.getElementById('btn-preview');
+    const form = document.getElementById('form-etiqueta');
+
+    let idleTimer = null;
+    let inflight = null;
+    let lastGenerated = '';
+    let previewUrl = '';
+
+    function normalizeBarcode(value) {
+      return String(value || '').replace(/[\r\n\t]/g, '').replace(/\s+/g, '').trim();
+    }
+
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.style.display = message ? 'block' : 'none';
+    }
+
+    function setBusy(on) {
+      busy.style.display = on ? 'block' : 'none';
+      btnPreview.disabled = on;
+    }
+
+    function claveActual() {
+      return [
+        normalizeBarcode(barcodeField.value),
+        skuField.value.trim(),
+        colorField.value.trim(),
+        talleField.value.trim(),
+      ].join('|');
+    }
+
+    function mostrarOpciones(opciones) {
+      opcionesBox.innerHTML = '<div class="desc">Elegí color y talle:</div>';
+      opciones.forEach((op) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = (op.color || 'Sin color') + '  ·  talle ' + (op.talle || '-');
+        btn.addEventListener('click', () => {
+          skuField.value = op.sku || skuField.value;
+          colorField.value = op.color || '';
+          talleField.value = op.talle || '';
+          barcodeField.value = '';
+          generar();
+        });
+        opcionesBox.appendChild(btn);
+      });
+      opcionesBox.classList.add('visible');
+    }
+
+    function scheduleGenerate() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        const code = normalizeBarcode(barcodeField.value);
+        if (code.length >= 8) generar();
+      }, 220);
+    }
+
+    barcodeField.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        clearTimeout(idleTimer);
+        generar();
+      }
+    });
+
+    barcodeField.addEventListener('input', () => {
+      const code = normalizeBarcode(barcodeField.value);
+      if (barcodeField.value !== code) barcodeField.value = code;
+      if (code) {
+        skuField.value = '';
+        colorField.value = '';
+        talleField.value = '';
+        lastGenerated = '';
+        if (code.length >= 8) scheduleGenerate();
+      }
+    });
+
+    [skuField, colorField, talleField].forEach((field) => {
+      field.addEventListener('input', () => {
+        if (field.value.trim()) barcodeField.value = '';
+        lastGenerated = '';
+      });
+      field.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          generar();
+        }
+      });
+    });
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      clearTimeout(idleTimer);
+      generar();
+    });
+
+    document.getElementById('link-imprimir').addEventListener('click', async (event) => {
+      event.preventDefault();
+      const ok = await generar();
+      if (!ok) return;
+      if (previewImg.complete) {
+        window.print();
+        return;
+      }
+      previewImg.onload = () => {
+        previewImg.onload = null;
+        window.print();
+      };
+    });
+
+    async function generar() {
+      const code = normalizeBarcode(barcodeField.value);
+      const sku = skuField.value.trim();
+      const color = colorField.value.trim();
+      const talle = talleField.value.trim();
+      barcodeField.value = code;
+
+      if (!code && !sku) {
+        showError('Escaneá un código de barras o ingresá el SKU.');
+        return false;
+      }
+      if (code && code.length < 8 && !sku) {
+        showError('El código de barras está incompleto. Si no está, usá el SKU.');
+        return false;
+      }
+      if (claveActual() === lastGenerated && preview.classList.contains('visible')) return true;
+
+      clearTimeout(idleTimer);
+      if (inflight) inflight.abort();
+      inflight = new AbortController();
+
+      setBusy(true);
+      showError('');
+      opcionesBox.classList.remove('visible');
+      opcionesBox.innerHTML = '';
+      try {
+        const body = new URLSearchParams();
+        if (code.length >= 8) body.set('barcode', code);
+        if (sku) body.set('sku', sku);
+        if (color) body.set('color', color);
+        if (talle) body.set('talle', talle);
+        const response = await fetch('/etiqueta/generar', {
+          method: 'POST',
+          headers: {
+            'Accept': 'image/png, application/json',
+            'X-Requested-With': 'fetch',
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body,
+          signal: inflight.signal,
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        if (!response.ok || contentType.includes('application/json')) {
+          let message = 'No pude generar la etiqueta.';
+          try {
+            const data = await response.json();
+            if (data.opciones && data.opciones.length) {
+              mostrarOpciones(data.opciones);
+              return false;
+            }
+            if (data.error) message = data.error;
+          } catch (_) {}
+          showError(message);
+          return false;
+        }
+
+        const blob = await response.blob();
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = URL.createObjectURL(blob);
+        previewImg.src = previewUrl;
+        preview.classList.add('visible');
+        lastGenerated = claveActual();
+        if (code) barcodeField.select();
+        else skuField.select();
+        return true;
+      } catch (error) {
+        if (error.name !== 'AbortError') showError('Se cortó la generación. Volvé a intentar.');
+        return false;
+      } finally {
+        setBusy(false);
+        inflight = null;
+      }
+    }
+  </script>
+</body>
+</html>
