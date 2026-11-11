@@ -20,6 +20,11 @@ EQUIV_XLSX = os.path.join(DATA_DIR, "equivalencia.xlsx")
 EQUIV_META = os.path.join(DATA_DIR, "equivalencia.meta")
 ALLOWED_EXTENSIONS = {".xls", ".xlsx"}
 _CACHE = {"path": None, "mtime": None, "lookup": None}
+SIZES = {
+    "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL", "XXXXL",
+    "2XS", "3XS", "2XL", "3XL", "4XL", "OS", "OSFA", "ALL",
+    "UNICO", "UNICA", "U", "SM", "MD", "LG",
+} | {str(number) for number in range(55)}
 
 
 def _extension(filename):
@@ -61,6 +66,24 @@ def _looks_like_barcode(value):
     return value.isdigit() and len(value) >= 8
 
 
+def _row_values(row):
+    return [_text(value) for value in row.tolist()]
+
+
+def _find_article_in_row(values):
+    """Encuentra el campo con formato SKU + código de color, ej. 21170 BLK."""
+    for value in values:
+        sku, color = _split_article(value)
+        if sku.isdigit() and color:
+            return sku, color
+    return "", ""
+
+
+def _find_size_in_row(values):
+    # El talle de los exports Crystal aparece normalmente al final de la fila.
+    return next((value.upper() for value in reversed(values) if value.upper() in SIZES), "")
+
+
 def _read_equivalence(path):
     engine = "xlrd" if _extension(path) == ".xls" else "openpyxl"
     excel = pd.ExcelFile(path, engine=engine)
@@ -69,27 +92,14 @@ def _read_equivalence(path):
         df = excel.parse(sheet, header=None, dtype=str)
         if df.empty:
             continue
-        headers = {_header(value): col for col, value in enumerate(df.iloc[0]) if _text(value)}
-        code_col = _find_header(headers, "CODIGO", "CODIGOS", "CODIGO DE BARRA", "CODIGOS DE BARRA", "BARRA", "BARCODE")
-        article_col = _find_header(headers, "ARTICULO", "ARTICULOS", "ARTIC", "SKU COLOR", "CONCAT")
-        sku_col = _find_header(headers, "SKU")
-        color_col = _find_header(headers, "COLOR", "COD.COLOR", "COD COLOR")
-        size_col = _find_header(headers, "TALLE", "TAL", "SIZE")
-        has_headers = code_col is not None and (article_col is not None or (sku_col is not None and color_col is not None))
-        if has_headers:
-            rows = df.iloc[1:]
-        else:
-            code_col, article_col, size_col = 0, 1, 5
-            sku_col, color_col, rows = None, None, df
-        for _, row in rows.iterrows():
-            code = _text(row.get(code_col))
-            if not _looks_like_barcode(code):
-                continue
-            if sku_col is not None and color_col is not None:
-                sku, color = _text(row.get(sku_col)), _text(row.get(color_col))
-            else:
-                sku, color = _split_article(row.get(article_col))
-            size = _text(row.get(size_col)).upper() if size_col is not None else ""
+        # Los exports de Crystal Reports pueden tener encabezados sólo en la primera
+        # hoja y reiniciar los datos en las demás. Por eso se detectan los campos
+        # en cada fila, en vez de depender de columnas fijas.
+        for _, row in df.iterrows():
+            values = _row_values(row)
+            code = next((value for value in values if _looks_like_barcode(value)), "")
+            sku, color = _find_article_in_row(values)
+            size = _find_size_in_row(values)
             if sku and color and size:
                 lookup[(sku.upper(), color.upper(), size)].append(code)
     return lookup
